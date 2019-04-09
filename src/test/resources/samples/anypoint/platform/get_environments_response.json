@@ -1,0 +1,13 @@
+{
+  "data": [
+    {
+      "id": "f1d8bf1f-23a8-4be7-b441-d8d1c8f27b90",
+      "name": "Development",
+      "organizationId": "774c4016-88a2-4432-9c7d-d8bafe4328f4",
+      "isProduction": false,
+      "type": "sandbox",
+      "clientId": "34279f80f80344c98fd278276d774e57"
+    }
+  ],
+  "total": 1
+}

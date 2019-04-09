@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns:context="http://www.springframework.org/schema/context" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+	xmlns:spring="http://www.springframework.org/schema/beans" 
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context-current.xsd
+http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-current.xsd
+http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd">
+
+	<context:property-placeholder location="config/analytics-event-aggregator-${env}.properties" />
+    <http:request-config name="HTTP_Anypoint_Platform_Request_Configuration" protocol="${anypoint.platform.protocol}" host="${anypoint.platform.host}" port="${anypoint.platform.port}" basePath="${anypoint.platform.basepath}" responseTimeout="${anypoint.platform.timeout.millis}" doc:name="HTTP Request Configuration"/>
+    <http:request-config name="HTTP_Splunk_Request_Configuration" host="${splunk.hec.url}" port="${splunk.hec.port}" basePath="${splunk.hec.basepath}" doc:name="HTTP Request Configuration" protocol="${splunk.hec.protocol}"/>
+
+</mule>
