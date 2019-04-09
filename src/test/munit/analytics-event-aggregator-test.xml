@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mule xmlns:mock="http://www.mulesoft.org/schema/mule/mock" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:munit="http://www.mulesoft.org/schema/mule/munit" xmlns:spring="http://www.springframework.org/schema/beans" xmlns:core="http://www.mulesoft.org/schema/mule/core" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/munit http://www.mulesoft.org/schema/mule/munit/current/mule-munit.xsd
+http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-current.xsd
+http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/mock http://www.mulesoft.org/schema/mule/mock/current/mule-mock.xsd">
+    <munit:config name="munit" doc:name="MUnit configuration"/>
+    <spring:beans>
+    	<spring:import resource="classpath:global.xml"/>
+    	<spring:import resource="classpath:implementation.xml"/>
+    </spring:beans>
+    <munit:test name="analytics-event-aggregator-test" description="Test Anypoint Analytics Event Aggregator">
+        <mock:spy messageProcessor="http:request" doc:name="Spy">
+            <mock:with-attributes>
+                <mock:with-attribute name="doc:name" whereValue="#['Request token to Anypoint Platform']"/>
+            </mock:with-attributes>
+            <mock:assertions-before-call>
+                <munit:assert-on-equals expectedValue="#[getResource('testdata/anypoint_platform_token_request.json').asString()]" actualValue="#[message.payloadAs(java.lang.String)]" doc:name="Assert Anypoint Platform Login POST Matches" message="The transformed Anypoint Platform Login Request should match &quot;anypoint_platform_token_request.json&quot;, but it doesn't"/>
+            	<set-session-variable variableName="anypointPlatformLoginInvoked" value="#[true]" doc:name="+anypointPlatformLoginInvoked" />
+            </mock:assertions-before-call>
+        </mock:spy>
+        <mock:spy doc:name="Spy" messageProcessor="http:request">
+            <mock:with-attributes>
+                <mock:with-attribute name="doc:name" whereValue="#['Get Organization hierarchy']"/>
+            </mock:with-attributes>
+            <mock:assertions-before-call>
+                <munit:assert-on-equals expectedValue="#['Bearer 252b6976-9d7a-401c-bc41-6a4a056cf8ef']" actualValue="#[flowVars.authorization]" doc:name="Assert Authorization Header"/>
+            	<set-session-variable variableName="getOrganizationHierarchyInvoked" value="#[true]" doc:name="+getOrganizationHierarchyInvoked" />
+            </mock:assertions-before-call>
+        </mock:spy>
+        <mock:spy messageProcessor="http:request" doc:name="Spy">
+            <mock:with-attributes>
+                <mock:with-attribute name="doc:name" whereValue="#['Get Environments']"/>
+            </mock:with-attributes>
+            <mock:assertions-before-call>
+                <munit:assert-on-equals expectedValue="#['Bearer 252b6976-9d7a-401c-bc41-6a4a056cf8ef']" actualValue="#[flowVars.authorization]" doc:name="Assert Authorization Header"/>
+                <munit:assert-on-equals expectedValue="#['774c4016-88a2-4432-9c7d-d8bafe4328f4']" actualValue="#[flowVars.organizationId]" doc:name="Assert Organization Id Uri Param"/>
+            	<set-session-variable variableName="getEnvironmentsInvoked" value="#[true]" doc:name="+getEnvironmentsInvoked" />
+            </mock:assertions-before-call>
+        </mock:spy>
+        <mock:spy messageProcessor="http:request" doc:name="Spy">
+            <mock:with-attributes>
+                <mock:with-attribute name="doc:name" whereValue="#['Request Analytics Events']"/>
+            </mock:with-attributes>
+            <mock:assertions-before-call>
+                <munit:assert-on-equals expectedValue="#['f1d8bf1f-23a8-4be7-b441-d8d1c8f27b90']" actualValue="#[flowVars.environmentId]" doc:name="Assert Environment ID"/>
+                <munit:assert-on-equals expectedValue="#['Development']" actualValue="#[flowVars.environmentName]" doc:name="Assert Environment Name"/>
+            	<set-session-variable variableName="getAnalyticsEventsInvoked" value="#[true]" doc:name="+getAnalyticsEventsInvoked" />
+            </mock:assertions-before-call>
+        </mock:spy>
+        <mock:spy messageProcessor="http:request" doc:name="Spy">
+            <mock:with-attributes>
+                <mock:with-attribute name="doc:name" whereValue="#['Send events to Splunk HEC']"/>
+            </mock:with-attributes>
+            <mock:assertions-before-call>
+                <munit:assert-on-equals expectedValue="#[getResource('testdata/splunk_hec_request.json').asString()]" actualValue="#[message.payloadAs(java.lang.String)]" doc:name="Assert Splunk HEC POST Matches" message="The Splunk HEC Request should match &quot;splunk_hec_request.json&quot;, but it doesn't"/>
+            </mock:assertions-before-call>
+        </mock:spy>
+        <mock:when messageProcessor="http:request" doc:name="Request token to Anypoint Platform">
+            <mock:with-attributes>
+                <mock:with-attribute name="doc:name" whereValue="#['Request token to Anypoint Platform']"/>
+            </mock:with-attributes>
+            <mock:then-return payload="#[getResource('samples/anypoint/platform/post_accounts_login_response.json').asString()]" mimeType="application/json"/>
+        </mock:when>
+        <mock:when messageProcessor="http:request" doc:name="Get Organization hierarchy">
+            <mock:with-attributes>
+                <mock:with-attribute name="doc:name" whereValue="#['Get Organization hierarchy']"/>
+            </mock:with-attributes>
+            <mock:then-return payload="#[getResource('samples/anypoint/platform/get_organization_hierarchy_response.json').asString()]" mimeType="application/json"/>
+        </mock:when>
+        <mock:when messageProcessor="http:request" doc:name="Get Environments">
+            <mock:with-attributes>
+                <mock:with-attribute name="doc:name" whereValue="#['Get Environments']"/>
+            </mock:with-attributes>
+            <mock:then-return payload="#[getResource('samples/anypoint/platform/get_environments_response.json').asString()]" mimeType="application/json"/>
+        </mock:when>
+        <mock:when messageProcessor="http:request" doc:name="Request Analytics Events">
+            <mock:with-attributes>
+                <mock:with-attribute name="doc:name" whereValue="#['Request Analytics Events']"/>
+            </mock:with-attributes>
+            <mock:then-return payload="#[getResource('samples/anypoint/platform/get_analytics_events.json').asString()]" mimeType="application/json"/>
+        </mock:when>
+        <mock:when messageProcessor="http:request" doc:name="Request Splunk HEC">
+            <mock:with-attributes>
+                <mock:with-attribute name="doc:name" whereValue="#['Send events to Splunk HEC']"/>
+            </mock:with-attributes>
+            <mock:then-return payload="#['{&quot;text&quot;:&quot;Success&quot;,&quot;code&quot;:0}']" encoding="UTF-8" mimeType="application/json" />
+        </mock:when>
+        <set-variable variableName="lastSyncDate" value="#[server.dateTime.withTimeZone('UTC').plusSeconds('-'+${mule.poll.frequency.seconds})]" doc:name="+lastSyncDate"/>
+        <flow-ref name="analytics-event-sync-flow" doc:name="analytics-event-sync-flow"/>
+        <munit:assert-on-equals actualValue="#[sessionVars.anypointPlatformLoginInvoked]" expectedValue="#[true]" doc:name="Assert Anypoint Platform Login Endpoint Invoked" />
+        <munit:assert-on-equals actualValue="#[sessionVars.getOrganizationHierarchyInvoked]" expectedValue="#[true]" doc:name="Assert Get Organization Hierarchy Invoked" />
+        <munit:assert-on-equals actualValue="#[sessionVars.getEnvironmentsInvoked]" expectedValue="#[true]" doc:name="Assert Get Environments Invoked" />
+        <munit:assert-on-equals actualValue="#[sessionVars.getAnalyticsEventsInvoked]" expectedValue="#[true]" doc:name="Assert Get Analytics Events Invoked" />
+    </munit:test>
+</mule>

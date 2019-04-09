@@ -1,0 +1,127 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:json="http://www.mulesoft.org/schema/mule/json"
+	xmlns:dw="http://www.mulesoft.org/schema/mule/ee/dw" xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns:tracking="http://www.mulesoft.org/schema/mule/ee/tracking" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+	xmlns:spring="http://www.springframework.org/schema/beans" 
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.mulesoft.org/schema/mule/json http://www.mulesoft.org/schema/mule/json/current/mule-json.xsd
+http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-current.xsd
+http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/ee/tracking http://www.mulesoft.org/schema/mule/ee/tracking/current/mule-tracking-ee.xsd
+http://www.mulesoft.org/schema/mule/ee/dw http://www.mulesoft.org/schema/mule/ee/dw/current/dw.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd">
+    <flow name="analytics-event-sync-flow" processingStrategy="synchronous">
+        <poll doc:name="Poll">
+            <fixed-frequency-scheduler frequency="${mule.poll.frequency.seconds}" timeUnit="SECONDS"/>
+            <watermark variable="lastSyncDate" default-expression="#[server.dateTime.withTimeZone('UTC').plusSeconds('-'+${mule.poll.frequency.seconds})]" update-expression="#[flowVars.currentSyncDate]"/>
+            <logger message="Starting synchronization process" level="INFO" doc:name="Logger"/>
+        </poll>
+        <set-variable variableName="transactionId" value="#[message.rootId.replace('-', '')]" doc:name="+transactionId"/>
+        <dw:transform-message doc:name="+config">
+        	<dw:input-payload mimeType="application/java" />
+            <dw:set-variable resource="classpath:variables/set-config-variable.dwl" variableName="config"/>
+        </dw:transform-message>
+        <flow-ref name="sync-analytics-event-flow" doc:name="sync-analytics-event-flow"/>
+        <logger message="transactionId: #[flowVars.transactionId] - Events sent to Splunk" level="INFO" doc:name="Logger"/>
+        <catch-exception-strategy doc:name="Catch Exception Strategy">
+            <logger message="transactionId: #[flowVars.transactionId] - analytics-event-aggregator failed - Error: #[exception.message] - Cause: #[exception.cause]" level="INFO" doc:name="Logger"/>
+        </catch-exception-strategy>
+    </flow>
+    <flow name="sync-analytics-event-flow">
+    	<flow-ref name="anypoint-platform-login-flow" doc:name="Request token to Anypoint Platform"/>
+        <flow-ref name="anypoint-platform-organization-hierarchy" doc:name="anypoint-platform-organization-hierarchy"/>
+        <foreach  doc:name="For Each">
+            <set-variable variableName="organizationId" value="#[payload]" doc:name="+organizationId"/>
+            <logger message="transactionId: #[flowVars.transactionId] - Starting sync process for organizationId: #[flowVars.organizationId]" level="INFO" doc:name="Logger"/>
+            <flow-ref name="anypoint-platform-environments-flow" doc:name="anypoint-platform-environments-flow"/>
+            <expression-filter expression="#[payload.size() &gt; 0]" doc:name="Expression"/>
+            <flow-ref name="sync-analytics-event-for-environment-flow" doc:name="sync-analytics-event-for-environment-flow"/>
+        </foreach>
+    </flow>
+    <sub-flow name="anypoint-platform-login-flow">
+        <logger message="transactionId: #[flowVars.transactionId] - Login to Anypoint Platform" level="INFO" doc:name="Logger"/>
+        <set-variable variableName="currentSyncDate" value="#[server.dateTime.withTimeZone('UTC')]" doc:name="+currentSyncDate"/>
+        <dw:transform-message doc:name="Map JSON request">
+        	<dw:input-payload mimeType="application/java" />
+            <dw:set-payload resource="classpath:mappings/set-login-request-message.dwl"/>
+        </dw:transform-message>
+        <http:request config-ref="HTTP_Anypoint_Platform_Request_Configuration" path="/accounts/login" method="POST" doc:name="Request token to Anypoint Platform"/>
+        <dw:transform-message doc:name="+authorization">
+            <dw:set-variable resource="classpath:variables/set-authorization-variable.dwl" variableName="authorization"/>
+        </dw:transform-message>
+        <logger message="transactionId: #[flowVars.transactionId] - Authentication token retrieved" level="INFO" doc:name="Logger"/>
+    </sub-flow>
+    <sub-flow name="anypoint-platform-organization-hierarchy">
+        <logger message="transactionId: #[flowVars.transactionId] - Get Organization hierarchy" level="INFO" doc:name="Logger"/>
+        <http:request config-ref="HTTP_Anypoint_Platform_Request_Configuration" path="/accounts/api/organizations/${anypoint.platform.root.organizationId}/hierarchy" method="GET" doc:name="Get Organization hierarchy">
+        	<http:request-builder>
+                <http:header headerName="Authorization" value="#[flowVars.authorization]"/>
+            </http:request-builder>
+        </http:request>
+        <dw:transform-message doc:name="+orgIdNameMap">
+            <dw:set-variable resource="classpath:variables/set-orgIdNameMap-variable.dwl" variableName="orgIdNameMap"/>
+        </dw:transform-message>
+        <dw:transform-message doc:name="Map organization hierarchy">
+            <dw:set-payload resource="classpath:mappings/map-organization-hierarchy.dwl"/>
+        </dw:transform-message>
+        <logger message="transactionId: #[flowVars.transactionId] - Retrieved #[message.payload.size()] organizations" level="INFO" doc:name="Logger"/>
+    </sub-flow>
+    <sub-flow name="anypoint-platform-environments-flow">
+        <logger message="transactionId: #[flowVars.transactionId] - Retrieving environments for organizationid: #[flowVars.organizationId]" level="INFO" doc:name="Logger"/>
+        <http:request config-ref="HTTP_Anypoint_Platform_Request_Configuration" path="/accounts/api/organizations/{organizationId}/environments" method="GET" doc:name="Get Environments">
+            <http:request-builder>
+                <http:uri-param paramName="organizationId" value="#[flowVars.organizationId]"/>
+                <http:header headerName="Authorization" value="#[flowVars.authorization]"/>
+            </http:request-builder>
+        </http:request>
+        <dw:transform-message doc:name="Map JSON response to Object">
+            <dw:set-payload resource="classpath:mappings/map-environment-id-and-name.dwl"/>
+        </dw:transform-message>
+        <logger message="transactionId: #[flowVars.transactionId] - Retrieved #[message.payload.size()] environments for organizationid: #[flowVars.organizationId]" level="INFO" doc:name="Logger"/>
+    </sub-flow>
+    <sub-flow name="sync-analytics-event-for-environment-flow">
+        <foreach doc:name="For Each">
+            <flow-ref name="sync-environment-analytics-event-flow" doc:name="sync-environment-analytics-event-flow"/>
+        </foreach>
+    </sub-flow>
+    <sub-flow name="sync-environment-analytics-event-flow">
+        <set-variable variableName="environmentId" value="#[payload.environmentId]" doc:name="+environmentId"/>
+        <set-variable variableName="environmentName" value="#[payload.environmentName]" doc:name="+environmentName"/>
+        <logger message="transactionId: #[flowVars.transactionId] - Retrieving analytics events - organizationid: #[flowVars.organizationId] - environmentId: #[flowVars.environmentId] - environmentName: #[payload.environmentName] - from #[flowVars.lastSyncDate] - to #[flowVars.currentSyncDate]" level="INFO" doc:name="Logger"/>
+        <http:request config-ref="HTTP_Anypoint_Platform_Request_Configuration" path="analytics/{version}/{orgId}/environments/{envId}/events" method="GET" doc:name="Request Analytics Events">
+            <http:request-builder>
+                <http:query-param paramName="format" value="json"/>
+                <http:query-param paramName="startDate" value="#[flowVars.lastSyncDate.format()]"/>
+                <http:query-param paramName="endDate" value="#[flowVars.currentSyncDate.format()]"/>
+                <http:query-param paramName="fields" value="Browser,City,Client IP,Continent,Country,Hardware Platform,Message ID,OS Family,OS Major Version,OS Minor Version,OS Version,Postal Code,Request Outcome,Request Size,Resource Path,Response Size,Response Time,Status Code,Timezone,User Agent Name,User Agent Version,Verb,Violated Policy Name"/>
+                <http:uri-param paramName="version" value="1.0"/>
+                <http:uri-param paramName="orgId" value="#[flowVars.organizationId]"/>
+                <http:uri-param paramName="envId" value="#[flowVars.environmentId]"/>
+                <http:header headerName="Authorization" value="#[flowVars.authorization]"/>
+            </http:request-builder>
+        </http:request>
+        <dw:transform-message doc:name="Transform to events array">
+            <dw:set-payload resource="classpath:mappings/transform-to-analytics-event-array.dwl"/>
+        </dw:transform-message>
+        <logger message="transactionId: #[flowVars.transactionId] - Analytics Events transformed - #[payload.size()] events" level="INFO" doc:name="Logger"/>
+        <logger message="transactionId: #[flowVars.transactionId] - Retrieved Analytics events - organizationid: #[flowVars.organizationId] - environmentId: #[flowVars.environmentId] - environmentName: #[flowVars.environmentName] - from #[flowVars.lastSyncDate] - to #[flowVars.currentSyncDate]" level="INFO" doc:name="Logger"/>
+        <flow-ref name="send-events-to-splunk-flow" doc:name="send-events-to-splunk-flow"/>
+    </sub-flow>
+    <sub-flow name="send-events-to-splunk-flow">
+        <expression-filter expression="#[payload.size() &gt; 0]" doc:name="Expression"/>
+        <logger message="transactionId: #[flowVars.transactionId] - Sending events to Splunk for one environment - organizationid: #[flowVars.organizationId] - environmentId: #[flowVars.environmentId] - environmentName: #[flowVars.environmentName] - Number of events: #[payload.size()]" level="INFO" doc:name="Logger"/>
+        <flow-ref name="transform-events-array-to-json-splunk-format-flow" doc:name="transform-events-array-to-json-splunk-format-flow"/>
+        <http:request config-ref="HTTP_Splunk_Request_Configuration" path="${splunk.hec.path}" method="POST" doc:name="Send events to Splunk HEC">
+            <http:request-builder>
+                <http:header headerName="Authorization" value="Splunk ${splunk.hec.token}"/>
+            </http:request-builder>
+        </http:request>
+        <logger message="transactionId: #[flowVars.transactionId] - Response from Splunk: #[message.payloadAs(java.lang.String)]" level="INFO" doc:name="Logger"/>
+    </sub-flow>
+    <sub-flow name="transform-events-array-to-json-splunk-format-flow">
+    	<collection-splitter doc:name="Split events"/>
+        <json:object-to-json-transformer doc:name="Events to String"/>
+        <collection-aggregator failOnTimeout="true" doc:name="Agreggate events"/>
+        <expression-transformer expression="#[org.apache.commons.lang.StringUtils.join(message.payload,&quot; &quot;)]" doc:name="Join event strings"/>
+    </sub-flow>
+</mule>
