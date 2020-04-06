@@ -2,6 +2,9 @@
 
 This tool is intended to serve as a Splunk aggregator that collects events about API consumption from [Analytics Event Export API](https://anypoint.mulesoft.com/exchange/portals/anypoint-platform/f1e97bc6-315a-4490-82a7-23abe036327a.anypoint-platform/analytics-event-export-api/) and send them to a Splunk instance.
 
+
+Please, take into account that this version is for Mule Runtime 3.x only.
+
 ## How-to use the Mule Application
 
 1. Open **analytics-event-aggregator-local.properties** file, located under **src/main/resources/config** folder.
