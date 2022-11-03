@@ -1,0 +1,116 @@
+{
+  "name": "DIGITAL-MANU-API",
+  "id": "774c4016-88a2-4432-9c7d-d8bafe4328f4",
+  "createdAt": "2018-05-02T00:23:31.763Z",
+  "updatedAt": "2018-07-17T13:28:51.641Z",
+  "ownerId": "[OWNER ID]",
+  "clientId": "[CLIENT ID]",
+  "domain": null,
+  "idprovider_id": "mulesoft",
+  "isFederated": true,
+  "parentOrganizationIds": [
+    "[ANYPOINT ORG ID]"
+  ],
+  "tenantOrganizationIds": [],
+  "isMaster": false,
+  "ownerName": "XOM Mule Admin",
+  "sessionTimeout": 60,
+  "entitlements": {
+    "createEnvironments": true,
+    "globalDeployment": false,
+    "createSubOrgs": false,
+    "hybrid": {
+      "enabled": true
+    },
+    "hybridInsight": true,
+    "hybridAutoDiscoverProperties": true,
+    "vCoresProduction": {
+      "assigned": 0.9,
+      "reassigned": 0
+    },
+    "vCoresSandbox": {
+      "assigned": 0.3,
+      "reassigned": 0
+    },
+    "vCoresDesign": {
+      "assigned": 0,
+      "reassigned": 0
+    },
+    "staticIps": {
+      "assigned": 0,
+      "reassigned": 0
+    },
+    "vpcs": {
+      "assigned": 0,
+      "reassigned": 0
+    },
+    "vpns": {
+      "assigned": 0,
+      "reassigned": 0
+    },
+    "workerLoggingOverride": {
+      "enabled": false
+    },
+    "mqMessages": {
+      "base": 250000000,
+      "addOn": 0
+    },
+    "mqRequests": {
+      "base": 2500000000,
+      "addOn": 0
+    },
+    "objectStoreRequestUnits": {
+      "base": 0,
+      "addOn": 0
+    },
+    "objectStoreKeys": {
+      "base": 0,
+      "addOn": 0
+    },
+    "mqAdvancedFeatures": {
+      "enabled": true
+    },
+    "designCenter": {
+      "apiExample": false,
+      "apiVisual": false,
+      "mozart": true,
+      "api": true
+    },
+    "partnersProduction": {
+      "assigned": 0
+    },
+    "partnersSandbox": {
+      "assigned": 0
+    },
+    "loadBalancer": {
+      "assigned": 0,
+      "reassigned": 0
+    },
+    "apiMonitoring": {
+      "schedules": 5
+    },
+    "monitoringCenter": {
+      "productSKU": 0
+    },
+    "kpiDashboard": {
+      "enabled": false
+    },
+    "pcf": false,
+    "appViz": false,
+    "runtimeFabric": true,
+    "anypointSecurityTokenization": {
+      "enabled": false
+    },
+    "anypointSecurityEdgePolicies": {
+      "enabled": false
+    },
+    "messaging": {
+      "assigned": 1
+    },
+    "workerClouds": {
+      "assigned": 1,
+      "reassigned": 0
+    }
+  },
+  "subOrganizations": []
+}
